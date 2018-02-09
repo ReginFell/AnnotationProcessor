@@ -57,52 +57,55 @@ public class ViewStateProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
         for (Element element : roundEnvironment.getElementsAnnotatedWith(ViewState.class)) {
+            if (element.getKind() == ElementKind.INTERFACE) {
 
-            final String packageName = elementUtils.getPackageOf(element).getQualifiedName().toString();
-            final String className = element.getSimpleName() + "State";
+                final String packageName = elementUtils.getPackageOf(element).getQualifiedName().toString();
+                final String className = element.getSimpleName() + "State";
 
-            final TypeSpec.Builder outputType = TypeSpec.classBuilder(className)
-                    .addSuperinterface(TypeName.get(element.asType()))
-                    .superclass(ParameterizedTypeName.get(ClassName.get(BaseViewState.class), TypeName.get(element.asType())))
-                    .addModifiers(Modifier.PUBLIC);
+                final TypeSpec.Builder outputType = TypeSpec.classBuilder(className)
+                        .addSuperinterface(TypeName.get(element.asType()))
+                        .superclass(ParameterizedTypeName.get(ClassName.get(BaseViewState.class), TypeName.get(element.asType())))
+                        .addModifiers(Modifier.PUBLIC);
 
-            for (Element method : element.getEnclosedElements()) {
-                if (method.getKind() == ElementKind.METHOD) {
-                    final ExecutableType executableType = (ExecutableType) method.asType();
+                for (Element method : element.getEnclosedElements()) {
+                    if (method.getKind() == ElementKind.METHOD) {
+                        final ExecutableType executableType = (ExecutableType) method.asType();
 
-                    final List<ParameterSpec> parameterSpecs = createParameterSpecs(executableType.getParameterTypes());
+                        final List<ParameterSpec> parameterSpecs = createParameterSpecs(executableType.getParameterTypes());
+                        final String argumentsString = extractArguments(parameterSpecs);
 
-                    CodeBlock codeBlock;
-                    if (TypeName.get(executableType.getReturnType()).equals(TypeName.VOID)) {
-                        codeBlock = CodeBlock.builder()
-                                .add("dispatch(view -> view.")
-                                .add(method.getSimpleName().toString() + "(" + extractArguments(parameterSpecs) + ")")
-                                .add(");")
-                                .build();
-                    } else {
-                        codeBlock = CodeBlock.builder()
-                                .add("return processUnsafe(view -> view.")
-                                .add(method.getSimpleName().toString() + "(" + extractArguments(parameterSpecs) + ")")
-                                .add(");")
-                                .build();
+                        CodeBlock codeBlock;
+                        if (TypeName.get(executableType.getReturnType()).equals(TypeName.VOID)) {
+                            codeBlock = CodeBlock.builder()
+                                    .add("dispatch(view -> view.")
+                                    .add(method.getSimpleName().toString() + "(" + argumentsString + ")")
+                                    .add(");")
+                                    .build();
+                        } else {
+                            codeBlock = CodeBlock.builder()
+                                    .add("return processUnsafe(view -> view.")
+                                    .add(method.getSimpleName().toString() + "(" + argumentsString + ")")
+                                    .add(");")
+                                    .build();
+                        }
+
+                        outputType.addMethod(MethodSpec.methodBuilder(method.getSimpleName().toString())
+                                .addParameters(parameterSpecs)
+                                .addModifiers(Modifier.PUBLIC)
+                                .returns(TypeName.get(executableType.getReturnType()))
+                                .addCode(codeBlock)
+                                .build());
                     }
-
-                    outputType.addMethod(MethodSpec.methodBuilder(method.getSimpleName().toString())
-                            .addParameters(parameterSpecs)
-                            .addModifiers(Modifier.PUBLIC)
-                            .returns(TypeName.get(executableType.getReturnType()))
-                            .addCode(codeBlock)
-                            .build());
                 }
-            }
 
-            JavaFile javaFile = JavaFile.builder(packageName, outputType.build())
-                    .addFileComment("This file is auto-generated and should not be edited.")
-                    .build();
-            try {
-                javaFile.writeTo(filer);
-            } catch (IOException e) {
-                messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage(), element);
+                JavaFile javaFile = JavaFile.builder(packageName, outputType.build())
+                        .addFileComment("This file is auto-generated and should not be edited.")
+                        .build();
+                try {
+                    javaFile.writeTo(filer);
+                } catch (IOException e) {
+                    messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, e.getMessage(), element);
+                }
             }
         }
         return true;
