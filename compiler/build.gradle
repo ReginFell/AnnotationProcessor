@@ -10,4 +10,9 @@ dependencies {
     implementation 'com.google.auto.service:auto-service:1.0-rc4'
     implementation 'com.squareup:javapoet:1.10.0'
 
+    implementation 'com.google.guava:guava:22.0'
+    testImplementation 'com.google.truth:truth:0.39'
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'com.google.testing.compile:compile-testing:0.13'
+
 }

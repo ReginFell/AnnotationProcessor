@@ -34,8 +34,8 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 
-import processor.annotation.presentation.annotation.ViewState;
 import processor.annotation.presentation.core.BaseViewState;
+import processor.annotation.presentation.annotation.ViewState;
 
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 @SupportedAnnotationTypes("processor.annotation.presentation.annotation.ViewState")
